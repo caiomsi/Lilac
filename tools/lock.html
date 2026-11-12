@@ -63,7 +63,7 @@ button:disabled { opacity: .6; }
     <circle r="8" fill="#F6EBC4"/>
   </svg>
   <h1>A little garden</h1>
-  <p>Only one person knows the way in.</p>
+  <p>Only two people know the way in.</p>
   <input type="password" id="pw" inputmode="numeric" autocomplete="current-password" aria-label="Password" autofocus>
   <label><input type="checkbox" id="remember" checked> Remember me on this device</label>
   <button type="submit" id="go">Open</button>
@@ -91,11 +91,39 @@ button:disabled { opacity: .6; }
     });
   }
 
-  var saved = null;
-  try { saved = localStorage.getItem("lilac.key"); } catch (e) {}
-  if (saved) {
-    crypto.subtle.importKey("raw", b64(saved), "AES-GCM", false, ["decrypt"]).then(open).catch(function () {
-      try { localStorage.removeItem("lilac.key"); } catch (e) {}
+  // Two passwords open the same page. Hers unlocks it directly; his unlocks a
+  // wrapped copy of the same key (P.alt). Which one was used tells the page who is here.
+  function setWho(who, remember) {
+    try { sessionStorage.setItem("lilac.who", who); } catch (e) {}
+    try { if (remember) localStorage.setItem("lilac.who", who); else localStorage.removeItem("lilac.who"); } catch (e) {}
+  }
+  function unlock(pw) {
+    var key;
+    return derive(pw).then(function (k) {
+      key = k;
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(P.iv) }, key, b64(P.ct));
+    }).then(function () {
+      return crypto.subtle.exportKey("raw", key).then(function (raw) { return { who: "g", raw: raw, key: key }; });
+    }, function () {
+      if (!P.alt) throw new Error("no");
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(P.alt.iv) }, key, b64(P.alt.ct)).then(function (raw) {
+        return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]).then(function (main) { return { who: "c", raw: raw, key: main }; });
+      });
+    });
+  }
+
+  var saved = null, savedWho = null;
+  try { saved = localStorage.getItem("lilac.key"); savedWho = localStorage.getItem("lilac.who"); } catch (e) {}
+  if (saved && !savedWho) {
+    // Remembered from before there were two logins: ask once more so the page knows who this is.
+    try { localStorage.removeItem("lilac.key"); } catch (e) {}
+    err.textContent = "There are two keys now, one each. Sign in once more.";
+  } else if (saved) {
+    crypto.subtle.importKey("raw", b64(saved), "AES-GCM", false, ["decrypt"]).then(function (key) {
+      try { sessionStorage.setItem("lilac.who", savedWho); } catch (e) {}
+      return open(key);
+    }).catch(function () {
+      try { localStorage.removeItem("lilac.key"); localStorage.removeItem("lilac.who"); } catch (e) {}
     });
   }
 
@@ -106,17 +134,11 @@ button:disabled { opacity: .6; }
     go.disabled = true;
     go.textContent = "Opening…";
     err.textContent = "";
-    var key;
-    derive(pw).then(function (k) {
-      key = k;
-      return crypto.subtle.exportKey("raw", k);
-    }).then(function (raw) {
-      return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(P.iv) }, key, b64(P.ct)).then(function () {
-        if (document.getElementById("remember").checked) {
-          try { localStorage.setItem("lilac.key", toB64(raw)); } catch (e) {}
-        }
-        return open(key);
-      });
+    unlock(pw).then(function (r) {
+      var remember = document.getElementById("remember").checked;
+      try { if (remember) localStorage.setItem("lilac.key", toB64(r.raw)); } catch (e) {}
+      setWho(r.who, remember);
+      return open(r.key);
     }).catch(function () {
       go.disabled = false;
       go.textContent = "Open";
