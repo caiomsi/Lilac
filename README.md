@@ -9,6 +9,6 @@ A small private page for two: a counter, a lily-field walk, and a shared album. 
 - `tools/lock.html` is the lock-screen template.
 
 ## Edit and publish
-1. Edit `src/app.html`. Songs (`SONGS`) and the milestone notes (`MILESTONES`) are at the top of its script.
-2. Run `LILAC_PASSWORD=… LILAC_PASSWORD_2=… node tools/encrypt.mjs` (two logins, one each)
+1. Edit `src/app.html`.
+2. Run `LILAC_PASSWORD=… node tools/encrypt.mjs` (her password; add `LILAC_PASSWORD_2=…` only to change his)
 3. `git add -A && git commit -m "…" && git push`
