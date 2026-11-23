@@ -10,9 +10,10 @@
   - RLS is on and there are no table grants.
   - Access goes only through the RPCs `lilac_get(secret)` and `lilac_step(secret, delta, note)`. `delta` must be 10 or -5. The total is clamped at ≥ 0, and history keeps the latest 200 entries.
   - The sync secret is embedded in `src/app.html`. Its sha256 hash is stored in the row.
-- **Album sync** (everything except steps: flower diary, selfies, daily question, songs, timeline, hearts; the letters, date jar and places sections were removed on 2026-11-19, but their tables and RPCs were left in place): tables `public.lilac_items` and `public.lilac_blobs` (photos as base64), defined in `supabase/album.sql`.
+- **Album sync** (everything except steps: flower diary, selfies, daily question, habits, timeline, hearts; the letters, date jar and places sections were removed on 2026-11-19, but their tables and RPCs were left in place): tables `public.lilac_items` and `public.lilac_blobs` (photos as base64), defined in `supabase/album.sql`.
   - Same model as steps: RLS on, no grants, access only through `lilac_list / lilac_put / lilac_del / lilac_thumbs / lilac_blob`, each checking the same secret.
   - The server hides the other person's daily answer until you've answered, and a date-locked letter's body until its date.
   - In the page, each section is a block in the script that uses the shared `A` helper (`A.items`, `A.put`, `A.pickPhoto`, ...).
-- Third parties the page loads: Google Fonts and Spotify embeds (song of the week).
+- **Habits** (added 2026-11-23): kind `habit`, one item per person per day `{day, talk, read, workout}`. `lilac_put` reuses the existing row for the same who+day, so saves are idempotent. Workout is optional on weekends (doesn't break streaks). `START` in the habits part is the first day counted.
+- Third parties the page loads: Google Fonts only.
 - Edit point at the top of the app script: `TOGETHER` (the date the together-since counter starts from).

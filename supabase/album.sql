@@ -77,11 +77,18 @@ declare
 begin
   if not lilac_ok(secret) then raise exception 'forbidden' using errcode = '42501'; end if;
   if who not in ('g', 'c') then raise exception 'bad who'; end if;
-  if kind not in ('bouquet', 'flower', 'selfie', 'letter', 'date', 'answer', 'place', 'song', 'event', 'ping')
+  if kind not in ('bouquet', 'flower', 'selfie', 'letter', 'date', 'answer', 'place', 'song', 'event', 'ping', 'habit')
     then raise exception 'bad kind'; end if;
   if length(data::text) > 12000 then raise exception 'data too big'; end if;
   if length(coalesce(thumb, '')) > 60000 then raise exception 'thumb too big'; end if;
   if length(coalesce(body, '')) > 1500000 then raise exception 'photo too big'; end if;
+
+  -- Habits: one check-in per person per day, so a second save for the same day updates it.
+  if kind = 'habit' then
+    if coalesce(data->>'day', '') !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'bad day'; end if;
+    select x.id into v_id from lilac_items x
+      where x.kind = 'habit' and x.who = lilac_put.who and x.data->>'day' = lilac_put.data->>'day' limit 1;
+  end if;
 
   if v_id is not null and exists (select 1 from lilac_items x where x.id = v_id) then
     update lilac_items x set data = lilac_put.data, updated_at = now() where x.id = v_id returning x.* into row;
