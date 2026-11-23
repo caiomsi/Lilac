@@ -14,6 +14,6 @@
   - Same model as steps: RLS on, no grants, access only through `lilac_list / lilac_put / lilac_del / lilac_thumbs / lilac_blob`, each checking the same secret.
   - The server hides the other person's daily answer until you've answered, and a date-locked letter's body until its date.
   - In the page, each section is a block in the script that uses the shared `A` helper (`A.items`, `A.put`, `A.pickPhoto`, ...).
-- **Habits** (added 2026-11-23): kind `habit`, one item per person per day `{day, talk, read, workout}`. `lilac_put` reuses the existing row for the same who+day, so saves are idempotent. Workout is optional on weekends (doesn't break streaks). `START` in the habits part is the first day counted.
+- **Habits** (added 2026-11-23): kind `habit`, one item per person per day `{day, talk, talkAt, read, workout}`; "talk" is one shared tick, decided by whichever row has the newest `talkAt`. `lilac_put` reuses the existing row for the same who+day, so saves are idempotent. Workout is optional on weekends (doesn't break streaks). `START` in the habits part is the first day counted.
 - Third parties the page loads: Google Fonts only.
 - Edit point at the top of the app script: `TOGETHER` (the date the together-since counter starts from).
