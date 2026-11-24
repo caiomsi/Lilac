@@ -8,8 +8,9 @@ self.addEventListener("push", function (e) {
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data ? e.data.text() : "" }; }
   e.waitUntil(self.registration.showNotification(d.title || "Lilac", {
     body: d.body || "",
-    tag: d.tag || "lilac",
-    renotify: true,
+    // A fresh tag every time: iOS ignores renotify, so a reused tag would
+    // silently replace the previous notification with no banner or sound.
+    tag: (d.tag || "lilac") + "-" + Date.now(),
     icon: "icon-192.png",
     badge: "icon-192.png",
     data: { url: d.url || self.registration.scope }
