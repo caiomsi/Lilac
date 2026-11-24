@@ -105,25 +105,6 @@ begin
       values (coalesce(v_id, gen_random_uuid()), kind, parent, who, data) returning * into row;
   end if;
 
-  -- A "thinking of you" heart from her emails Caio through the same notifier the
-  -- step counter uses (at most one email every ten minutes).
-  if kind = 'ping' and who = 'g' and not exists (
-    select 1 from lilac_items x where x.kind = 'ping' and x.who = 'g' and x.id <> row.id
-      and x.created_at > now() - interval '10 minutes') then
-    begin
-      perform net.http_post(
-        url := (select v from lilac_config where k = 'notify_url'),
-        body := jsonb_build_object(
-          'key', (select v from lilac_config where k = 'notify_key'),
-          'steps', (select total from lilac_steps where id = 'gabi'),
-          'delta', 0, 'milestone', 0, 'ping', true,
-          'note', 'She tapped the heart: thinking of you'),
-        headers := '{"Content-Type": "application/json"}'::jsonb)
-      where exists (select 1 from lilac_config where k = 'notify_url');
-    exception when others then null;
-    end;
-  end if;
-
   if thumb is not null or body is not null then
     insert into lilac_blobs (item_id, thumb, body) values (row.id, thumb, body)
     on conflict (item_id) do update
